@@ -17,7 +17,9 @@ const errorHandler = (err, req, res, next) => {
     response.stack = err.stack;
   }
 
-  logger.error(`[${err.origin}] ${method} ${originalUrl} - ${message}`);
+  logger.error(
+    `[${err.origin || "unknown"}] ${method} ${originalUrl} - ${message}`,
+  );
 
   res.status(statusCode).json(response);
 };

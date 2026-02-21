@@ -5,16 +5,6 @@ const register = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res
-        .status(400)
-        .json({ success: false, message: "email and password are required" });
-    }
-
-    if (password.length < 8) {
-      return res.status(400).json({ success: false, message: "password is too short" });
-    }
-
     const user = await authService.register(email, password);
 
     return res.status(201).json({ success: true, data: user });
@@ -27,12 +17,6 @@ const register = async (req, res, next) => {
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res
-        .status(400)
-        .json({ success: false, message: "email and password are required" });
-    }
 
     const { accessToken, refreshToken } = await authService.login(
       email,
@@ -53,7 +37,7 @@ const login = async (req, res, next) => {
   }
 };
 
-const logout = async (req, res, next) => {
+const logout = (req, res, next) => {
   res.clearCookie("refreshToken", {
     httpOnly: true,
     secure: !isDev,

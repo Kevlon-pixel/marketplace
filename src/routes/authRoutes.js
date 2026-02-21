@@ -5,12 +5,17 @@ const {
   logout,
   refresh,
 } = require("../controllers/authController");
+const authTokenMiddleware = require("../middlewares/authTokenMiddleware");
+const {
+  authValidRegMiddleware,
+  authValidLoginMiddleware,
+} = require("../middlewares/authValidatorMiddleware");
 
 const router = express.Router();
 
-router.post("/register", register);
-router.post("/login", login);
-router.post("/logout", logout);
+router.post("/register", authValidRegMiddleware, register);
+router.post("/login", authValidLoginMiddleware, login);
+router.post("/logout", authTokenMiddleware, logout);
 router.post("/refresh", refresh);
 
 module.exports = router;
