@@ -4,10 +4,9 @@ const express = require("express");
 const authRoutes = require("./routes/authRoutes");
 const app = express();
 const logger = require("./utils/logger");
-const errorHandler = require("./middlewares/errorMiddelware");
+const errorHandler = require("./middlewares/errorMiddleware");
 const prisma = require("../prisma/prismaClient");
 const cookieParser = require("cookie-parser");
-const isDev = require("./config/isDev");
 
 /*middleware для парсинга JSON в теле входящего запроса*/
 app.use(express.json());
@@ -29,7 +28,7 @@ async function bootstrap() {
       logger.info({ port: PORT }, `Server started`);
     });
   } catch (err) {
-    logger.error("Error to start app", err);
+    logger.error(`Error to start app - ${err}`);
     process.exit(1);
   }
 }

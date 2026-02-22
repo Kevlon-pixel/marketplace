@@ -30,6 +30,21 @@ const loginSchema = z.object({
   }),
 });
 
+const verifySchema = z.object({
+  body: z.object({
+    email: z
+      .string({ required_error: "email required" })
+      .email("incorrect email format")
+      .trim()
+      .toLowerCase(),
+    code: z.coerce
+      .number({ required_error: "code required" })
+      .int("code must be integer")
+      .min(100000, "code must be 6 digits")
+      .max(999999, "code must be 6 digits"),
+  }),
+});
+
 const authValidRegMiddleware = (req, res, next) => {
   try {
     const parsed = registerSchema.parse({
@@ -62,4 +77,24 @@ const authValidLoginMiddleware = (req, res, next) => {
   }
 };
 
-module.exports = { authValidRegMiddleware, authValidLoginMiddleware };
+const authValidVerifyMiddleware = (req, res, next) => {
+  try {
+    const parsed = verifySchema.parse({
+      body: req.body,
+    });
+
+    req.body = parsed.body;
+
+    next();
+  } catch (err) {
+    return res
+      .status(400)
+      .json({ success: false, message: "incorrect email or verification code" });
+  }
+};
+
+module.exports = {
+  authValidRegMiddleware,
+  authValidLoginMiddleware,
+  authValidVerifyMiddleware,
+};

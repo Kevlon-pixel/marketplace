@@ -14,6 +14,12 @@ const authTokenMiddleware = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
 
+    if (decoded.type !== "access") {
+      return res
+        .status(401)
+        .json({ success: false, message: "invalid token type" });
+    }
+
     req.user = decoded;
 
     next();
