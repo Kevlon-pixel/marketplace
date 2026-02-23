@@ -1,38 +1,40 @@
-const isDev = require("../config/isDev");
-const authService = require("../services/authService");
-const {
+import type { RequestHandler } from "express";
+import isDev from "../config/isDev";
+import authService from "../services/authService";
+import {
   ipLimiter,
   loginLimiter,
   verifyEmailLimiter,
-} = require("../utils/rateLimiter");
+} from "../utils/rateLimiter";
+import type { AppError } from "../types/error";
 
-const register = async (req, res, next) => {
-  const { email, password } = req.body;
+export const register: RequestHandler = async (req, res, next) => {
+  const { email, password } = req.body as { email: string; password: string };
 
   try {
     const user = await authService.register(email, password);
-
     return res.status(201).json({ success: true, data: user });
   } catch (err) {
-    err.origin = "authController.register";
-    next(err);
+    const appError = err as AppError;
+    appError.origin = "authController.register";
+    next(appError);
   }
 };
 
-const verify = async (req, res, next) => {
-  const { email, code } = req.body;
-  const ip = req.ip;
+export const verify: RequestHandler = async (req, res, next) => {
+  const { email, code } = req.body as { email: string; code: number };
+  const ip = req.ip || req.socket.remoteAddress || "unknown-ip";
 
   try {
     try {
       await ipLimiter.consume(ip);
-    } catch (ipReject) {
-      return res
-        .status(429)
-        .json({ message: "Слишком много запросов с вашего устройства." });
+    } catch {
+      return res.status(429).json({
+        message: "Слишком много запросов с вашего устройства.",
+      });
     }
-    const emailLimit = await verifyEmailLimiter.get(email);
 
+    const emailLimit = await verifyEmailLimiter.get(email);
     if (emailLimit && emailLimit.remainingPoints <= 0) {
       return res.status(429).json({
         success: false,
@@ -41,37 +43,36 @@ const verify = async (req, res, next) => {
     }
 
     const user = await authService.verifyEmail(email, code);
-
     await verifyEmailLimiter.delete(email);
-
     return res.status(200).json({ success: true, data: user });
   } catch (err) {
-    if (err.statusCode === 400) {
+    const appError = err as AppError;
+
+    if (appError.statusCode === 400) {
       try {
         await verifyEmailLimiter.consume(email);
-      } catch (rlRejected) {}
+      } catch {}
     }
 
-    err.origin = "authController.verify";
-    next(err);
+    appError.origin = "authController.verify";
+    next(appError);
   }
 };
 
-const login = async (req, res, next) => {
-  const { email, password } = req.body;
-  const ip = req.ip;
+export const login: RequestHandler = async (req, res, next) => {
+  const { email, password } = req.body as { email: string; password: string };
+  const ip = req.ip || req.socket.remoteAddress || "unknown-ip";
 
   try {
     try {
       await ipLimiter.consume(ip);
-    } catch (ipReject) {
-      return res
-        .status(429)
-        .json({ message: "Слишком много запросов с вашего устройства." });
+    } catch {
+      return res.status(429).json({
+        message: "Слишком много запросов с вашего устройства.",
+      });
     }
 
     const limiter = await loginLimiter.get(email);
-
     if (limiter && limiter.remainingPoints <= 0) {
       return res
         .status(429)
@@ -95,18 +96,22 @@ const login = async (req, res, next) => {
 
     return res.status(200).json({ success: true, accessToken });
   } catch (err) {
-    if (err.statusCode === 401 || err.statusCode === 403) {
+    const appError = err as AppError;
+
+    if (appError.statusCode === 401 || appError.statusCode === 403) {
       try {
         await loginLimiter.consume(email);
-      } catch (rlRejected) {}
+      } catch {
+        // ignore rate limiter errors here to keep original error flow
+      }
     }
 
-    err.origin = "authController.login";
-    next(err);
+    appError.origin = "authController.login";
+    next(appError);
   }
 };
 
-const logout = (req, res, next) => {
+export const logout: RequestHandler = (req, res) => {
   res.clearCookie("refreshToken", {
     httpOnly: true,
     secure: !isDev,
@@ -117,9 +122,9 @@ const logout = (req, res, next) => {
   res.status(200).json({ success: true, message: "logout successful" });
 };
 
-const refresh = async (req, res, next) => {
+export const refresh: RequestHandler = async (req, res, next) => {
   try {
-    const oldRefreshToken = req.cookies?.refreshToken;
+    const oldRefreshToken = req.cookies?.refreshToken as string | undefined;
 
     if (!oldRefreshToken) {
       return res
@@ -135,13 +140,13 @@ const refresh = async (req, res, next) => {
       secure: !isDev,
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: "/",
     });
 
     res.status(200).json({ success: true, accessToken });
   } catch (err) {
-    err.origin = "authController.refresh";
-    next(err);
+    const appError = err as AppError;
+    appError.origin = "authController.refresh";
+    next(appError);
   }
 };
-
-module.exports = { register, verify, login, logout, refresh };

@@ -1,17 +1,17 @@
-const prisma = require("../../prisma/prismaClient");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const smtp = require("../utils/smtp");
-const crypto = require("crypto");
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import jwt, { type JwtPayload, type SignOptions } from "jsonwebtoken";
+import prisma from "../../prisma/prismaClient";
+import smtp from "../utils/smtp";
+import { createError } from "../utils/createError";
+import { getOrThrowEnv } from "../utils/getOrThrowEnv";
 
 class AuthService {
-  async register(email, password) {
+  async register(email: string, password: string) {
     const now = new Date();
 
     const user = await prisma.user.findUnique({
-      where: {
-        email,
-      },
+      where: { email },
       select: {
         id: true,
         email: true,
@@ -22,29 +22,24 @@ class AuthService {
 
     if (user) {
       if (user.isEmailVerified) {
-        const error = new Error("user with this email already verified");
-        error.statusCode = 409;
-        throw error;
+        throw createError("user with this email already verified", 409);
       }
 
       if (
         user.emailVerificationCodeExpire !== null &&
         user.emailVerificationCodeExpire > now
       ) {
-        const error = new Error(
+        throw createError(
           "verification email already sent, please check your inbox",
+          400,
         );
-        error.statusCode = 400;
-        throw error;
       }
 
       const emailCode = crypto.randomInt(100000, 1000000);
       const expires = new Date(Date.now() + 10 * 60 * 1000);
 
       await prisma.user.update({
-        where: {
-          email: user.email,
-        },
+        where: { email: user.email },
         data: {
           emailVerificationCode: emailCode,
           emailVerificationCodeExpire: expires,
@@ -65,8 +60,8 @@ class AuthService {
       };
     }
 
-    const SALT = process.env.SALT;
-    const passwordHash = await bcrypt.hash(password, Number(SALT));
+    const salt = Number(getOrThrowEnv("SALT"));
+    const passwordHash = await bcrypt.hash(password, salt);
 
     const emailCode = crypto.randomInt(100000, 1000000);
     const expires = new Date(Date.now() + 10 * 60 * 1000);
@@ -95,13 +90,11 @@ class AuthService {
     return newUser;
   }
 
-  async verifyEmail(email, code) {
+  async verifyEmail(email: string, code: number) {
     const now = new Date();
 
     const user = await prisma.user.findUnique({
-      where: {
-        email,
-      },
+      where: { email },
       select: {
         id: true,
         email: true,
@@ -112,42 +105,30 @@ class AuthService {
     });
 
     if (!user) {
-      const error = new Error("user not found");
-      error.statusCode = 404;
-      throw error;
+      throw createError("user not found", 404);
     }
 
     if (user.isEmailVerified) {
-      const error = new Error("email already verified");
-      error.statusCode = 409;
-      throw error;
+      throw createError("email already verified", 409);
     }
 
     if (
       user.emailVerificationCode === null ||
       user.emailVerificationCodeExpire === null
     ) {
-      const error = new Error("verification code not requested");
-      error.statusCode = 400;
-      throw error;
+      throw createError("verification code not requested", 400);
     }
 
     if (user.emailVerificationCodeExpire < now) {
-      const error = new Error("verification code expired");
-      error.statusCode = 400;
-      throw error;
+      throw createError("verification code expired", 400);
     }
 
     if (user.emailVerificationCode !== code) {
-      const error = new Error("invalid verification code");
-      error.statusCode = 400;
-      throw error;
+      throw createError("invalid verification code", 400);
     }
 
-    const verifiedUser = await prisma.user.update({
-      where: {
-        id: user.id,
-      },
+    return prisma.user.update({
+      where: { id: user.id },
       data: {
         isEmailVerified: true,
         emailVerificationCode: null,
@@ -159,15 +140,11 @@ class AuthService {
         isEmailVerified: true,
       },
     });
-
-    return verifiedUser;
   }
 
-  async login(email, password) {
+  async login(email: string, password: string) {
     const existingUser = await prisma.user.findUnique({
-      where: {
-        email,
-      },
+      where: { email },
       select: {
         id: true,
         email: true,
@@ -178,9 +155,7 @@ class AuthService {
     });
 
     if (!existingUser) {
-      const error = new Error("invalid credentials");
-      error.statusCode = 401;
-      throw error;
+      throw createError("invalid credentials", 401);
     }
 
     const passwordCompare = await bcrypt.compare(
@@ -189,63 +164,60 @@ class AuthService {
     );
 
     if (!passwordCompare) {
-      const error = new Error("invalid credentials");
-      error.statusCode = 401;
-      throw error;
+      throw createError("invalid credentials", 401);
     }
 
     if (!existingUser.isEmailVerified) {
-      const error = new Error("email is not verified");
-      error.statusCode = 403;
-      throw error;
+      throw createError("email is not verified", 403);
     }
 
     return this.generateTokens(existingUser.id);
   }
 
-  async refresh(oldToken) {
-    let payload;
+  async refresh(oldToken: string) {
+    let payload: JwtPayload | string;
     try {
-      payload = jwt.verify(oldToken, process.env.JWT_REFRESH_SECRET);
-    } catch (err) {
-      const error = new Error("invalid refresh token");
-      error.statusCode = 401;
-      throw error;
+      payload = jwt.verify(oldToken, getOrThrowEnv("JWT_REFRESH_SECRET"));
+    } catch {
+      throw createError("invalid refresh token", 401);
     }
 
-    if (payload.type !== "refresh") {
-      const error = new Error("invalid token type");
-      error.statusCode = 400;
-      throw error;
+    if (typeof payload !== "object" || payload === null) {
+      throw createError("invalid refresh token payload", 400);
+    }
+
+    if (payload.type !== "refresh" || typeof payload.sub !== "string") {
+      throw createError("invalid token type", 400);
     }
 
     const user = await prisma.user.findUnique({
-      where: {
-        id: payload.sub,
-      },
+      where: { id: payload.sub },
     });
 
     if (!user) {
-      const error = new Error("user not found");
-      error.statusCode = 401;
-      throw error;
+      throw createError("user not found", 401);
     }
 
-    const { accessToken, refreshToken } = await this.generateTokens(
-      payload.sub,
-    );
-
-    return { accessToken, refreshToken };
+    return this.generateTokens(payload.sub);
   }
 
-  async generateTokens(userId) {
+  private async generateTokens(
+    userId: string,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    const accessExpires = getOrThrowEnv(
+      "JWT_ACCESS_EXPIRES",
+    ) as SignOptions["expiresIn"];
+    const refreshExpires = getOrThrowEnv(
+      "JWT_REFRESH_EXPIRES",
+    ) as SignOptions["expiresIn"];
+
     const accessToken = jwt.sign(
       {
         sub: userId,
         type: "access",
       },
-      process.env.JWT_ACCESS_SECRET,
-      { expiresIn: process.env.JWT_ACCESS_EXPIRES },
+      getOrThrowEnv("JWT_ACCESS_SECRET"),
+      { expiresIn: accessExpires },
     );
 
     const refreshToken = jwt.sign(
@@ -253,17 +225,22 @@ class AuthService {
         sub: userId,
         type: "refresh",
       },
-      process.env.JWT_REFRESH_SECRET,
-      { expiresIn: process.env.JWT_REFRESH_EXPIRES },
+      getOrThrowEnv("JWT_REFRESH_SECRET"),
+      { expiresIn: refreshExpires },
     );
 
     return { accessToken, refreshToken };
   }
 
-  async sendVerificationEmailOrRollback(userId, email, emailCode, expires) {
+  private async sendVerificationEmailOrRollback(
+    userId: string,
+    email: string,
+    emailCode: number,
+    expires: Date,
+  ): Promise<void> {
     try {
       await smtp(email, emailCode, expires);
-    } catch (smtpError) {
+    } catch {
       await prisma.user.update({
         where: { id: userId },
         data: {
@@ -272,13 +249,12 @@ class AuthService {
         },
       });
 
-      const error = new Error(
+      throw createError(
         "failed to send verification email, please try again",
+        503,
       );
-      error.statusCode = 503;
-      throw error;
     }
   }
 }
 
-module.exports = new AuthService();
+export default new AuthService();

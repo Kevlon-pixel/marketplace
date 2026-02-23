@@ -1,14 +1,17 @@
-const z = require("zod");
+import type { RequestHandler } from "express";
+import { z } from "zod";
 
 const registerSchema = z.object({
   body: z.object({
     email: z
-      .string({ required_error: "email required" })
+      .string()
+      .min(1, "email required")
       .email("incorrect email format")
       .trim()
       .toLowerCase(),
     password: z
-      .string({ required_error: "password required" })
+      .string()
+      .min(1, "password required")
       .min(8, "password must be at least 8 characters")
       .regex(
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]+$/,
@@ -20,12 +23,14 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   body: z.object({
     email: z
-      .string({ required_error: "email required" })
+      .string()
+      .min(1, "email required")
       .email("incorrect email format")
       .trim()
       .toLowerCase(),
     password: z
-      .string({ required_error: "password required" })
+      .string()
+      .min(1, "password required")
       .min(8, "password must be at least 8 characters"),
   }),
 });
@@ -33,68 +38,52 @@ const loginSchema = z.object({
 const verifySchema = z.object({
   body: z.object({
     email: z
-      .string({ required_error: "email required" })
+      .string()
+      .min(1, "email required")
       .email("incorrect email format")
       .trim()
       .toLowerCase(),
     code: z.coerce
-      .number({ required_error: "code required" })
+      .number()
       .int("code must be integer")
       .min(100000, "code must be 6 digits")
       .max(999999, "code must be 6 digits"),
   }),
 });
 
-const authValidRegMiddleware = (req, res, next) => {
+export const authValidRegMiddleware: RequestHandler = (req, res, next) => {
   try {
-    const parsed = registerSchema.parse({
-      body: req.body,
-    });
-
+    const parsed = registerSchema.parse({ body: req.body });
     req.body = parsed.body;
-
     next();
-  } catch (err) {
+  } catch {
     return res
       .status(400)
       .json({ success: false, message: "incorrect email or password" });
   }
 };
 
-const authValidLoginMiddleware = (req, res, next) => {
+export const authValidLoginMiddleware: RequestHandler = (req, res, next) => {
   try {
-    const parsed = loginSchema.parse({
-      body: req.body,
-    });
-
+    const parsed = loginSchema.parse({ body: req.body });
     req.body = parsed.body;
-
     next();
-  } catch (err) {
+  } catch {
     return res
       .status(400)
       .json({ success: false, message: "incorrect email or password" });
   }
 };
 
-const authValidVerifyMiddleware = (req, res, next) => {
+export const authValidVerifyMiddleware: RequestHandler = (req, res, next) => {
   try {
-    const parsed = verifySchema.parse({
-      body: req.body,
-    });
-
+    const parsed = verifySchema.parse({ body: req.body });
     req.body = parsed.body;
-
     next();
-  } catch (err) {
-    return res
-      .status(400)
-      .json({ success: false, message: "incorrect email or verification code" });
+  } catch {
+    return res.status(400).json({
+      success: false,
+      message: "incorrect email or verification code",
+    });
   }
-};
-
-module.exports = {
-  authValidRegMiddleware,
-  authValidLoginMiddleware,
-  authValidVerifyMiddleware,
 };
