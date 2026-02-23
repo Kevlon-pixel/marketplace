@@ -1,7 +1,7 @@
 import type { RequestHandler } from "express";
 import jwt from "jsonwebtoken";
-import type { TokenPayload } from "../types/auth";
-import { getOrThrowEnv } from "../utils/getOrThrowEnv";
+import type { TokenPayload } from "../../shared/types/auth";
+import { getOrThrowEnv } from "../../shared/utils/get-or-throw-env";
 
 const authTokenMiddleware: RequestHandler = (req, res, next) => {
   const authHeader = req.headers.authorization;

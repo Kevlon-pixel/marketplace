@@ -1,4 +1,4 @@
-import { getOrThrowEnv } from "../utils/getOrThrowEnv";
+import { getOrThrowEnv } from "../utils/get-or-throw-env";
 
 const isDev = getOrThrowEnv("NODE_ENV") === "development";
 

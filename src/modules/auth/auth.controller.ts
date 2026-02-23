@@ -1,12 +1,13 @@
 import type { RequestHandler } from "express";
-import isDev from "../config/isDev";
-import authService from "../services/authService";
+import isDev from "../../shared/config/is-dev";
+import authService from "./auth.service";
+
+import type { AppError } from "../../shared/types/error";
 import {
   ipLimiter,
   loginLimiter,
   verifyEmailLimiter,
-} from "../utils/rateLimiter";
-import type { AppError } from "../types/error";
+} from "../../shared/utils/rate-limiter";
 
 export const register: RequestHandler = async (req, res, next) => {
   const { email, password } = req.body as { email: string; password: string };

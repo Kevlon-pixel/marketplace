@@ -1,10 +1,10 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import jwt, { type JwtPayload, type SignOptions } from "jsonwebtoken";
-import prisma from "../../prisma/prismaClient";
-import smtp from "../utils/smtp";
-import { createError } from "../utils/createError";
-import { getOrThrowEnv } from "../utils/getOrThrowEnv";
+import prisma from "../../../prisma/prisma-client";
+import { createError } from "../../shared/utils/create-error";
+import { getOrThrowEnv } from "../../shared/utils/get-or-throw-env";
+import sendVerificationEmail from "../../shared/utils/smtp";
 
 class AuthService {
   async register(email: string, password: string) {
@@ -239,7 +239,7 @@ class AuthService {
     expires: Date,
   ): Promise<void> {
     try {
-      await smtp(email, emailCode, expires);
+      await sendVerificationEmail(email, emailCode, expires);
     } catch {
       await prisma.user.update({
         where: { id: userId },

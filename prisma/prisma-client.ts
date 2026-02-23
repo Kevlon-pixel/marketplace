@@ -2,7 +2,7 @@ import "dotenv/config";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma";
-import { getOrThrowEnv } from "../src/utils/getOrThrowEnv";
+import { getOrThrowEnv } from "../src/shared/utils/get-or-throw-env";
 
 const connectionString = getOrThrowEnv("DATABASE_URL");
 const pool = new Pool({ connectionString });

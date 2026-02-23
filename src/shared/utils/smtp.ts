@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
-import isDev from "../config/isDev";
-import { getOrThrowEnv } from "./getOrThrowEnv";
+import isDev from "../config/is-dev";
+import { getOrThrowEnv } from "./get-or-throw-env";
 
 function normalizeExpires(expires: Date | string): string {
   const date = new Date(expires);
