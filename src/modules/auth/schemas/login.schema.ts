@@ -8,9 +8,6 @@ export const LoginSchema = z.object({
       .email("incorrect email format")
       .trim()
       .toLowerCase(),
-    password: z
-      .string()
-      .min(1, "password required")
-      .min(8, "password must be at least 8 characters"),
+    password: z.string().min(1, "password required"),
   }),
 });
