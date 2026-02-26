@@ -1,4 +1,4 @@
-import { createError } from "./create-error";
+import { createError } from "./create-error.js";
 
 export const getOrThrowEnv = (name: string): string => {
   const value = process.env[name];

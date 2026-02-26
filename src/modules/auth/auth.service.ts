@@ -1,10 +1,10 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import jwt, { type JwtPayload, type SignOptions } from "jsonwebtoken";
-import prisma from "../../../prisma/prisma-client";
-import { createError } from "../../shared/utils/create-error";
-import { getOrThrowEnv } from "../../shared/utils/get-or-throw-env";
-import sendVerificationEmail from "../../shared/utils/smtp";
+import prisma from "../../../prisma/prisma-client.js";
+import { createError } from "../../shared/utils/create-error.js";
+import { getOrThrowEnv } from "../../shared/utils/get-or-throw-env.js";
+import sendVerificationEmail from "../../shared/utils/smtp.js";
 
 class AuthService {
   async register(email: string, password: string) {

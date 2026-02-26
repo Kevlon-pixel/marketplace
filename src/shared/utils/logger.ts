@@ -1,5 +1,5 @@
 import pino from "pino";
-import isDev from "../config/is-dev";
+import isDev from "../config/is-dev.js";
 
 const logger = pino({
   level: isDev ? "debug" : "info",

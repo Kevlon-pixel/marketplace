@@ -1,7 +1,7 @@
 import type { ErrorRequestHandler } from "express";
-import isDev from "../shared/config/is-dev";
-import type { AppError } from "../shared/types/error";
-import logger from "../shared/utils/logger";
+import isDev from "../shared/config/is-dev.js";
+import type { AppError } from "../shared/types/error.js";
+import logger from "../shared/utils/logger.js";
 
 const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   const appError = err as AppError;

@@ -1,13 +1,13 @@
 import type { RequestHandler } from "express";
-import isDev from "../../shared/config/is-dev";
-import authService from "./auth.service";
+import isDev from "../../shared/config/is-dev.js";
+import authService from "./auth.service.js";
 
-import type { AppError } from "../../shared/types/error";
+import type { AppError } from "../../shared/types/error.js";
 import {
   ipLimiter,
   loginLimiter,
   verifyEmailLimiter,
-} from "../../shared/utils/rate-limiter";
+} from "../../shared/utils/rate-limiter.js";
 
 export const register: RequestHandler = async (req, res, next) => {
   const { email, password } = req.body as { email: string; password: string };
@@ -102,9 +102,7 @@ export const login: RequestHandler = async (req, res, next) => {
     if (appError.statusCode === 401 || appError.statusCode === 403) {
       try {
         await loginLimiter.consume(email);
-      } catch {
-        // ignore rate limiter errors here to keep original error flow
-      }
+      } catch {}
     }
 
     appError.origin = "authController.login";

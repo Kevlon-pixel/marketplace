@@ -1,11 +1,11 @@
 import "dotenv/config";
 import cookieParser from "cookie-parser";
 import express from "express";
-import prisma from "../prisma/prisma-client";
-import errorHandler from "./middlewares/error.middleware";
-import authRoutes from "./modules/auth/auth.routes";
-import { getOrThrowEnv } from "./shared/utils/get-or-throw-env";
-import logger from "./shared/utils/logger";
+import prisma from "../prisma/prisma-client.js";
+import errorHandler from "./middlewares/error.middleware.js";
+import authRoutes from "./modules/auth/auth.routes.js";
+import { getOrThrowEnv } from "./shared/utils/get-or-throw-env.js";
+import logger from "./shared/utils/logger.js";
 import swaggerUi from "swagger-ui-express";
 import swaggerJsdocs from "swagger-jsdoc";
 

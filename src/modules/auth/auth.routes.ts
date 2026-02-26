@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { login, logout, refresh, register, verify } from "./auth.controller";
-import authTokenMiddleware from "./auth-token.middleware";
-import { validateMiddleware } from "../../middlewares/validate.middleware";
-import { RegisterSchema } from "./schemas/register.schema";
-import { VerifySchema } from "./schemas/verify.schema";
-import { LoginSchema } from "./schemas/login.schema";
+import { login, logout, refresh, register, verify } from "./auth.controller.js";
+import authTokenMiddleware from "./auth-token.middleware.js";
+import { validateMiddleware } from "../../middlewares/validate.middleware.js";
+import { RegisterSchema } from "./schemas/register.schema.js";
+import { VerifySchema } from "./schemas/verify.schema.js";
+import { LoginSchema } from "./schemas/login.schema.js";
 
 const router = Router();
 
