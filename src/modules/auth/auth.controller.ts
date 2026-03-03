@@ -3,14 +3,24 @@ import isDev from "../../shared/config/is-dev.js";
 import authService from "./auth.service.js";
 
 import type { AppError } from "../../shared/types/error.js";
+import { TypedRequest } from "../../shared/types/zod-request-express.js";
+import {
+  LoginSchema,
+  RegisterSchema,
+  VerifySchema,
+} from "./schemas/index.js";
 import {
   ipLimiter,
   loginLimiter,
   verifyEmailLimiter,
 } from "../../shared/utils/rate-limiter.js";
 
-export const register: RequestHandler = async (req, res, next) => {
-  const { email, password } = req.body as { email: string; password: string };
+export const register: RequestHandler = async (
+  req: TypedRequest<typeof RegisterSchema>,
+  res,
+  next,
+) => {
+  const { email, password } = req.body;
 
   try {
     const user = await authService.register(email, password);
@@ -22,8 +32,12 @@ export const register: RequestHandler = async (req, res, next) => {
   }
 };
 
-export const verify: RequestHandler = async (req, res, next) => {
-  const { email, code } = req.body as { email: string; code: number };
+export const verify: RequestHandler = async (
+  req: TypedRequest<typeof VerifySchema>,
+  res,
+  next,
+) => {
+  const { email, code } = req.body;
   const ip = req.ip || req.socket.remoteAddress || "unknown-ip";
 
   try {
@@ -60,8 +74,12 @@ export const verify: RequestHandler = async (req, res, next) => {
   }
 };
 
-export const login: RequestHandler = async (req, res, next) => {
-  const { email, password } = req.body as { email: string; password: string };
+export const login: RequestHandler = async (
+  req: TypedRequest<typeof LoginSchema>,
+  res,
+  next,
+) => {
+  const { email, password } = req.body;
   const ip = req.ip || req.socket.remoteAddress || "unknown-ip";
 
   try {

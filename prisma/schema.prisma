@@ -7,10 +7,32 @@ datasource db {
   provider = "postgresql"
 }
 
+enum ProductType {
+  KEY
+  ACCOUNT
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum InventoryItemStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
+  DISCARDED
+}
+
 model User {
   id           String @id @default(uuid())
   email        String @unique
   passwordHash String
+
+  orders   Order[]
+  products Product[]
 
   isEmailVerified             Boolean   @default(false)
   emailVerificationCode       Int?
@@ -18,4 +40,71 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  type        ProductType
+  title       String
+  description String
+  price       Decimal
+
+  inventory  InventoryItem[]
+  orderItems OrderItem[]
+
+  userId String
+  owner  User   @relation(fields: [userId], references: [id])
+
+  isActive Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  totalPrice Decimal
+  status     PaymentStatus @default(PENDING)
+
+  items OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrderItem {
+  id      String @id @default(uuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  inventoryItemId String?        @unique
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+
+  priceAtSale Decimal
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model InventoryItem {
+  id        String  @id @default(uuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  content Json
+
+  itemStatus InventoryItemStatus @default(AVAILABLE)
+
+  orderItem OrderItem?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId, itemStatus])
 }

@@ -2,9 +2,7 @@ import { Router } from "express";
 import { login, logout, refresh, register, verify } from "./auth.controller.js";
 import authTokenMiddleware from "./auth-token.middleware.js";
 import { validateMiddleware } from "../../middlewares/validate.middleware.js";
-import { RegisterSchema } from "./schemas/register.schema.js";
-import { VerifySchema } from "./schemas/verify.schema.js";
-import { LoginSchema } from "./schemas/login.schema.js";
+import { RegisterSchema, VerifySchema, LoginSchema } from "./schemas/index.js";
 
 const router = Router();
 
@@ -43,6 +41,79 @@ const router = Router();
  *           format: email
  *         password:
  *           type: string
+ *     AuthUser:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         email:
+ *           type: string
+ *           format: email
+ *         isEmailVerified:
+ *           type: boolean
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *     RegisterResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         data:
+ *           $ref: '#/components/schemas/AuthUser'
+ *     VerifyResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         data:
+ *           type: object
+ *           properties:
+ *             id:
+ *               type: string
+ *               format: uuid
+ *             email:
+ *               type: string
+ *               format: email
+ *             isEmailVerified:
+ *               type: boolean
+ *               example: true
+ *     AccessTokenResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         accessToken:
+ *           type: string
+ *     LogoutResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         message:
+ *           type: string
+ *           example: logout successful
+ *     ErrorResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: false
+ *         message:
+ *           type: string
+ *     RateLimitResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           nullable: true
+ *         message:
+ *           type: string
  */
 /**
  * @openapi
@@ -59,6 +130,22 @@ const router = Router();
  *     responses:
  *       201:
  *         description: User created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RegisterResponse'
+ *       400:
+ *         description: Validation or business rule error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       409:
+ *         description: Email already verified
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post("/register", validateMiddleware(RegisterSchema), register);
 /**
@@ -76,6 +163,34 @@ router.post("/register", validateMiddleware(RegisterSchema), register);
  *     responses:
  *       200:
  *         description: Email verified
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/VerifyResponse'
+ *       400:
+ *         description: Invalid or expired code
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       409:
+ *         description: Email already verified
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         description: Too many requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RateLimitResponse'
  */
 router.post("/verify", validateMiddleware(VerifySchema), verify);
 /**
@@ -93,6 +208,28 @@ router.post("/verify", validateMiddleware(VerifySchema), verify);
  *     responses:
  *       200:
  *         description: Authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AccessTokenResponse'
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Email is not verified
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         description: Too many requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RateLimitResponse'
  */
 router.post("/login", validateMiddleware(LoginSchema), login);
 /**
@@ -106,6 +243,16 @@ router.post("/login", validateMiddleware(LoginSchema), login);
  *     responses:
  *       200:
  *         description: Logged out
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LogoutResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post("/logout", authTokenMiddleware, logout);
 /**
@@ -117,6 +264,22 @@ router.post("/logout", authTokenMiddleware, logout);
  *     responses:
  *       200:
  *         description: Token refreshed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AccessTokenResponse'
+ *       401:
+ *         description: Missing or invalid refresh token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       400:
+ *         description: Invalid refresh token payload or type
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post("/refresh", refresh);
 
