@@ -50,7 +50,7 @@ model Product {
   price       Decimal
 
   inventory  InventoryItem[]
-  orderItems OrderItem[]
+  orders Order[]
 
   userId String
   owner  User   @relation(fields: [userId], references: [id])
@@ -66,20 +66,6 @@ model Order {
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
-  totalPrice Decimal
-  status     PaymentStatus @default(PENDING)
-
-  items OrderItem[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model OrderItem {
-  id      String @id @default(uuid())
-  orderId String
-  order   Order  @relation(fields: [orderId], references: [id])
-
   productId String
   product   Product @relation(fields: [productId], references: [id])
 
@@ -87,6 +73,7 @@ model OrderItem {
   inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id])
 
   priceAtSale Decimal
+  status      PaymentStatus @default(PENDING)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -98,13 +85,12 @@ model InventoryItem {
   product   Product @relation(fields: [productId], references: [id])
 
   content Json
+  status  InventoryItemStatus @default(AVAILABLE)
 
-  itemStatus InventoryItemStatus @default(AVAILABLE)
-
-  orderItem OrderItem?
+  order Order?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([productId, itemStatus])
+  @@index([productId, status])
 }

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getAllProducts, getProduct } from "./product.controller.js";
+import { getAllActiveProducts, getProduct } from "./product.controller.js";
 import { validateMiddleware } from "../../middlewares/validate.middleware.js";
 import { GetProductSchema } from "./schemas/product.schema.js";
 
@@ -89,7 +89,7 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/ProductListResponse'
  */
-router.get("", getAllProducts);
+router.get("", getAllActiveProducts);
 
 /**
  * @openapi

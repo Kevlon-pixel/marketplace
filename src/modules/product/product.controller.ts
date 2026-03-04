@@ -4,13 +4,13 @@ import productService from "./product.service.js";
 import { TypedRequest } from "../../shared/types/zod-request-express.js";
 import { GetProductSchema } from "./schemas/product.schema.js";
 
-export const getAllProducts = async (
+export const getAllActiveProducts = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    const data = await productService.getAllProducts();
+    const data = await productService.getAllActiveProducts();
 
     res.status(200).json({ success: true, data: data });
   } catch (err) {

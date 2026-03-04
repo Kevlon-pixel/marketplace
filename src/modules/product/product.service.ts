@@ -2,7 +2,7 @@ import prisma from "../../../prisma/prisma-client.js";
 import { createError } from "../../shared/utils/create-error.js";
 
 class ProductService {
-  async getAllProducts() {
+  async getAllActiveProducts() {
     const data = await prisma.product.findMany({
       where: {
         isActive: true,
@@ -46,7 +46,7 @@ class ProductService {
     const availableInventoryCount = await prisma.inventoryItem.count({
       where: {
         productId: data.id,
-        itemStatus: "AVAILABLE",
+        status: "AVAILABLE",
       },
     });
 

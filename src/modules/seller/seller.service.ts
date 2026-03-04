@@ -119,13 +119,13 @@ class SellerService {
   async deleteListing(userId: string, listingId: string) {
     await this.getSellerProduct(userId, listingId);
 
-    const orderItemsCount = await prisma.orderItem.count({
+    const ordersCount = await prisma.order.count({
       where: {
         productId: listingId,
       },
     });
 
-    if (orderItemsCount > 0) {
+    if (ordersCount > 0) {
       throw createError("listing with orders cannot be deleted", 400);
     }
 
@@ -182,12 +182,12 @@ class SellerService {
           userId,
         },
         ...(query.productId ? { productId: query.productId } : {}),
-        ...(query.status ? { itemStatus: query.status } : {}),
+        ...(query.status ? { status: query.status } : {}),
       },
       select: {
         id: true,
         productId: true,
-        itemStatus: true,
+        status: true,
         content: true,
         createdAt: true,
         updatedAt: true,
@@ -209,18 +209,16 @@ class SellerService {
     return await prisma.order.findMany({
       where: {
         ...(query.status ? { status: query.status } : {}),
-        items: {
-          some: {
-            product: {
-              userId,
-            },
-          },
+        product: {
+          userId,
         },
       },
       select: {
         id: true,
         status: true,
-        totalPrice: true,
+        productId: true,
+        inventoryItemId: true,
+        priceAtSale: true,
         createdAt: true,
         updatedAt: true,
         user: {
@@ -229,24 +227,16 @@ class SellerService {
             email: true,
           },
         },
-        items: {
-          where: {
-            product: {
-              userId,
-            },
+        product: {
+          select: {
+            title: true,
+            type: true,
           },
+        },
+        inventoryItem: {
           select: {
             id: true,
-            productId: true,
-            inventoryItemId: true,
-            priceAtSale: true,
-            createdAt: true,
-            product: {
-              select: {
-                title: true,
-                type: true,
-              },
-            },
+            status: true,
           },
         },
       },
@@ -260,18 +250,16 @@ class SellerService {
     const order = await prisma.order.findFirst({
       where: {
         id: orderId,
-        items: {
-          some: {
-            product: {
-              userId,
-            },
-          },
+        product: {
+          userId,
         },
       },
       select: {
         id: true,
         status: true,
-        totalPrice: true,
+        productId: true,
+        inventoryItemId: true,
+        priceAtSale: true,
         createdAt: true,
         updatedAt: true,
         user: {
@@ -280,30 +268,16 @@ class SellerService {
             email: true,
           },
         },
-        items: {
-          where: {
-            product: {
-              userId,
-            },
+        product: {
+          select: {
+            title: true,
+            type: true,
           },
+        },
+        inventoryItem: {
           select: {
             id: true,
-            productId: true,
-            inventoryItemId: true,
-            priceAtSale: true,
-            createdAt: true,
-            product: {
-              select: {
-                title: true,
-                type: true,
-              },
-            },
-            inventoryItem: {
-              select: {
-                id: true,
-                itemStatus: true,
-              },
-            },
+            status: true,
           },
         },
       },
