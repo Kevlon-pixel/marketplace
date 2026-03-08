@@ -15,6 +15,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@a2seven/yoo-checkout": "^1.1.4",
     "@prisma/adapter-pg": "^7.4.0",
     "@prisma/client": "^7.4.1",
     "bcryptjs": "^3.0.3",

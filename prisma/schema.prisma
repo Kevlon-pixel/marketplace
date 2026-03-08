@@ -49,8 +49,8 @@ model Product {
   description String
   price       Decimal
 
-  inventory  InventoryItem[]
-  orders Order[]
+  inventory InventoryItem[]
+  orders    Order[]
 
   userId String
   owner  User   @relation(fields: [userId], references: [id])
@@ -69,8 +69,11 @@ model Order {
   productId String
   product   Product @relation(fields: [productId], references: [id])
 
-  inventoryItemId String?        @unique
-  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+  inventoryItemId String        @unique
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  paymentId      String?
+  idempotenceKey String?
 
   priceAtSale Decimal
   status      PaymentStatus @default(PENDING)

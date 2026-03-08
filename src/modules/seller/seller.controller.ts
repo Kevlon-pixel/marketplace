@@ -22,7 +22,7 @@ export const listings = async (
 
   try {
     if (!userId) {
-      return res.status(401).json({ success: true, message: "unauthorized" });
+      return res.status(401).json({ success: false, message: "unauthorized" });
     }
 
     await sellerService.listings(userId, req.body);
@@ -45,7 +45,7 @@ export const updateListing = async (
 
   try {
     if (!userId) {
-      return res.status(401).json({ success: true, message: "unauthorized" });
+      return res.status(401).json({ success: false, message: "unauthorized" });
     }
 
     const data = await sellerService.updateListing(userId, listingId, req.body);

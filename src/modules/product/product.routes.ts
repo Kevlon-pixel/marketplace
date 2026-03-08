@@ -77,7 +77,7 @@ const router = Router();
 
 /**
  * @openapi
- * /product:
+ * /api/product:
  *   get:
  *     tags: [Product]
  *     summary: Get all active products
@@ -93,7 +93,7 @@ router.get("", getAllActiveProducts);
 
 /**
  * @openapi
- * /product/{id}:
+ * /api/product/{id}:
  *   get:
  *     tags: [Product]
  *     summary: Get active product by id

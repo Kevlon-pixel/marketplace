@@ -68,7 +68,7 @@ const router = Router();
 
 /**
  * @openapi
- * /seller/listings:
+ * /api/seller/listings:
  *   post:
  *     tags: [Seller]
  *     summary: Create seller listing
@@ -121,7 +121,7 @@ router.post(
 
 /**
  * @openapi
- * /seller/listings/{id}:
+ * /api/seller/listings/{id}:
  *   patch:
  *     tags: [Seller]
  *     summary: Update seller listing
@@ -188,7 +188,7 @@ router.patch(
 
 /**
  * @openapi
- * /seller/listings/{id}:
+ * /api/seller/listings/{id}:
  *   delete:
  *     tags: [Seller]
  *     summary: Delete seller listing
@@ -236,7 +236,7 @@ router.delete(
 
 /**
  * @openapi
- * /seller/inventory/keys/import:
+ * /api/seller/inventory/keys/import:
  *   post:
  *     tags: [Seller]
  *     summary: Import key inventory items for seller listing
@@ -294,7 +294,7 @@ router.post(
 
 /**
  * @openapi
- * /seller/inventory/accounts/import:
+ * /api/seller/inventory/accounts/import:
  *   post:
  *     tags: [Seller]
  *     summary: Import account inventory items for seller listing
@@ -364,7 +364,7 @@ router.post(
 
 /**
  * @openapi
- * /seller/inventory:
+ * /api/seller/inventory:
  *   get:
  *     tags: [Seller]
  *     summary: Get seller inventory items
@@ -406,7 +406,7 @@ router.get(
 
 /**
  * @openapi
- * /seller/orders:
+ * /api/seller/orders:
  *   get:
  *     tags: [Seller]
  *     summary: Get seller orders
@@ -442,7 +442,7 @@ router.get(
 
 /**
  * @openapi
- * /seller/orders/{id}:
+ * /api/seller/orders/{id}:
  *   get:
  *     tags: [Seller]
  *     summary: Get seller order by id
