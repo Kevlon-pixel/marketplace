@@ -1,4 +1,5 @@
 import { Router } from "express";
+import authorizeRoles from "../auth/authorize-roles.middleware.js";
 import authTokenMiddleware from "../auth/auth-token.middleware.js";
 import { validateMiddleware } from "../../middlewares/validate.middleware.js";
 import {
@@ -115,6 +116,7 @@ const router = Router();
 router.post(
   "/listings",
   authTokenMiddleware,
+  authorizeRoles("user"),
   validateMiddleware(ListingSchema),
   listings,
 );
@@ -182,6 +184,7 @@ router.post(
 router.patch(
   "/listings/:id",
   authTokenMiddleware,
+  authorizeRoles("user"),
   validateMiddleware(UpdateListingSchema),
   updateListing,
 );
@@ -230,6 +233,7 @@ router.patch(
 router.delete(
   "/listings/:id",
   authTokenMiddleware,
+  authorizeRoles("user"),
   validateMiddleware(DeleteListingSchema),
   deleteListing,
 );
@@ -288,6 +292,7 @@ router.delete(
 router.post(
   "/inventory/keys/import",
   authTokenMiddleware,
+  authorizeRoles("user"),
   validateMiddleware(ImportInventoryKeysSchema),
   importInventoryKeys,
 );
@@ -358,6 +363,7 @@ router.post(
 router.post(
   "/inventory/accounts/import",
   authTokenMiddleware,
+  authorizeRoles("user"),
   validateMiddleware(ImportInventoryAccountsSchema),
   importInventoryAccounts,
 );
@@ -400,6 +406,7 @@ router.post(
 router.get(
   "/inventory",
   authTokenMiddleware,
+  authorizeRoles("user"),
   validateMiddleware(GetInventorySchema),
   getInventory,
 );
@@ -436,6 +443,7 @@ router.get(
 router.get(
   "/orders",
   authTokenMiddleware,
+  authorizeRoles("user"),
   validateMiddleware(GetSellerOrdersSchema),
   getOrders,
 );
@@ -478,6 +486,7 @@ router.get(
 router.get(
   "/orders/:id",
   authTokenMiddleware,
+  authorizeRoles("user"),
   validateMiddleware(GetSellerOrderSchema),
   getOrder,
 );

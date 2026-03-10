@@ -17,7 +17,7 @@ const swaggerDocs = swaggerJsdocs({
     openapi: "3.1.0",
     info: {
       title: "Marketplace",
-      version: "0.1",
+      version: "0.2",
       description: "Marketplace API documentation",
     },
     components: {

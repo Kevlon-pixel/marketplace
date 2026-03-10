@@ -1,8 +1,21 @@
 import { Router } from "express";
-import { login, logout, refresh, register, verify } from "./auth.controller.js";
+import {
+  guest,
+  login,
+  logout,
+  refresh,
+  register,
+  verify,
+} from "./auth.controller.js";
+import authorizeRoles from "./authorize-roles.middleware.js";
 import authTokenMiddleware from "./auth-token.middleware.js";
 import { validateMiddleware } from "../../middlewares/validate.middleware.js";
-import { RegisterSchema, VerifySchema, LoginSchema } from "./schemas/index.js";
+import {
+  GuestSchema,
+  LoginSchema,
+  RegisterSchema,
+  VerifySchema,
+} from "./schemas/index.js";
 
 const router = Router();
 
@@ -41,6 +54,13 @@ const router = Router();
  *           format: email
  *         password:
  *           type: string
+ *     GuestInput:
+ *       type: object
+ *       required: [email]
+ *       properties:
+ *         email:
+ *           type: string
+ *           format: email
  *     AuthUser:
  *       type: object
  *       properties:
@@ -89,6 +109,26 @@ const router = Router();
  *           example: true
  *         accessToken:
  *           type: string
+ *     GuestAuthResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         accessToken:
+ *           type: string
+ *         data:
+ *           type: object
+ *           properties:
+ *             id:
+ *               type: string
+ *               format: uuid
+ *             email:
+ *               type: string
+ *               format: email
+ *             createdAt:
+ *               type: string
+ *               format: date-time
  *     LogoutResponse:
  *       type: object
  *       properties:
@@ -254,7 +294,7 @@ router.post("/login", validateMiddleware(LoginSchema), login);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post("/logout", authTokenMiddleware, logout);
+router.post("/logout", authTokenMiddleware, authorizeRoles("user"), logout);
 /**
  * @openapi
  * /api/auth/refresh:
@@ -282,5 +322,39 @@ router.post("/logout", authTokenMiddleware, logout);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post("/refresh", refresh);
+
+/**
+ * @openapi
+ * /api/auth/guest:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Create or reuse guest user and issue guest access token
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/GuestInput'
+ *     responses:
+ *       200:
+ *         description: Guest token issued
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/GuestAuthResponse'
+ *       409:
+ *         description: Email already belongs to a registered user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         description: Too many guest auth attempts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RateLimitResponse'
+ */
+router.post("/guest", validateMiddleware(GuestSchema), guest);
 
 export default router;

@@ -5,11 +5,13 @@ import authService from "./auth.service.js";
 import type { AppError } from "../../shared/types/error.js";
 import { TypedRequest } from "../../shared/types/zod-request-express.js";
 import {
+  GuestSchema,
   LoginSchema,
   RegisterSchema,
   VerifySchema,
 } from "./schemas/index.js";
 import {
+  guestEmailLimiter,
   ipLimiter,
   loginLimiter,
   verifyEmailLimiter,
@@ -164,6 +166,40 @@ export const refresh: RequestHandler = async (req, res, next) => {
   } catch (err) {
     const appError = err as AppError;
     appError.origin = "authController.refresh";
+    next(appError);
+  }
+};
+
+export const guest: RequestHandler = async (
+  req: TypedRequest<typeof GuestSchema>,
+  res,
+  next,
+) => {
+  const { email } = req.body;
+  const ip = req.ip || req.socket.remoteAddress || "unknown-ip";
+
+  try {
+    try {
+      await ipLimiter.consume(ip);
+      await guestEmailLimiter.consume(email);
+    } catch {
+      return res.status(429).json({
+        success: false,
+        message: "too many guest auth attempts",
+      });
+    }
+
+    const { accessToken, user } = await authService.guest(email);
+    await guestEmailLimiter.delete(email);
+
+    return res.status(200).json({
+      success: true,
+      accessToken,
+      data: user,
+    });
+  } catch (err) {
+    const appError = err as AppError;
+    appError.origin = "authController.guest";
     next(appError);
   }
 };

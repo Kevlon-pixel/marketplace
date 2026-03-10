@@ -4,7 +4,6 @@ import { validateMiddleware } from "../../middlewares/validate.middleware.js";
 import {
   createOrder,
   payOrder,
-  getOrderSuccess,
   getOrder,
   getMyOrders,
   yooKassaWebhook,
@@ -202,40 +201,6 @@ router.post(
   authTokenMiddleware,
   validateMiddleware(PayOrderSchema),
   payOrder,
-);
-
-/**
- * @openapi
- * /api/order/{id}/success:
- *   get:
- *     tags: [Order]
- *     summary: Get order payment status with delivered item if paid
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *     responses:
- *       200:
- *         description: Order payment status
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/OrderResponse'
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Order not found
- */
-router.get(
-  "/:id/success",
-  authTokenMiddleware,
-  validateMiddleware(GetOrderSchema),
-  getOrderSuccess,
 );
 
 /**

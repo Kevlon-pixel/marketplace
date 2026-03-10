@@ -63,43 +63,6 @@ export const payOrder = async (
   }
 };
 
-export const getOrderSuccess = async (
-  req: TypedRequest<typeof GetOrderSchema>,
-  res: Response,
-  next: NextFunction,
-) => {
-  const orderId = req.params.id;
-  const userId = req.user?.sub;
-
-  try {
-    if (!userId) {
-      return res.status(401).json({ success: false, message: "unauthorized" });
-    }
-
-    const data = await orderService.getOrderStatus(orderId, userId);
-
-    let message = "waiting for payment confirmation";
-
-    if (data.status === "PAID") {
-      message = "payment successful, item available";
-    } else if (data.status === "FAILED") {
-      message = "payment failed";
-    } else if (data.status === "REFUNDED") {
-      message = "payment refunded";
-    }
-
-    return res.status(200).json({
-      success: true,
-      message,
-      data,
-    });
-  } catch (err) {
-    const appError = err as AppError;
-    appError.origin = "orderController.getOrderSuccess";
-    next(appError);
-  }
-};
-
 export const getOrder = async (
   req: TypedRequest<typeof GetOrderSchema>,
   res: Response,

@@ -3,24 +3,18 @@ import crypto from "crypto";
 import jwt, { type JwtPayload, type SignOptions } from "jsonwebtoken";
 import prisma from "../../../prisma/prisma-client.js";
 import { createError } from "../../shared/utils/create-error.js";
+import { UserRole } from "../../shared/types/auth.js";
 import { getOrThrowEnv } from "../../shared/utils/get-or-throw-env.js";
-import sendVerificationEmail from "../../shared/utils/smtp.js";
+import { sendVerificationEmail } from "../../shared/utils/smtp.js";
+import userService from "../user/user.service.js";
 
 class AuthService {
   async register(email: string, password: string) {
     const now = new Date();
 
-    const user = await prisma.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        email: true,
-        isEmailVerified: true,
-        emailVerificationCodeExpire: true,
-      },
-    });
+    const user = await userService.findUserByEmail(email);
 
-    if (user) {
+    if (user?.passwordHash) {
       if (user.isEmailVerified) {
         throw createError("user with this email already verified", 409);
       }
@@ -66,19 +60,19 @@ class AuthService {
     const emailCode = crypto.randomInt(100000, 1000000);
     const expires = new Date(Date.now() + 10 * 60 * 1000);
 
-    const newUser = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        emailVerificationCode: emailCode,
-        emailVerificationCodeExpire: expires,
-      },
-      select: {
-        id: true,
-        email: true,
-        createdAt: true,
-      },
-    });
+    const newUser = user
+      ? await userService.upgradeGuestToRegistered(
+          user.id,
+          passwordHash,
+          emailCode,
+          expires,
+        )
+      : await userService.createRegisteredUser(
+          email,
+          passwordHash,
+          emailCode,
+          expires,
+        );
 
     await this.sendVerificationEmailOrRollback(
       newUser.id,
@@ -158,6 +152,10 @@ class AuthService {
       throw createError("invalid credentials", 401);
     }
 
+    if (!existingUser.passwordHash) {
+      throw createError("user is not registered", 401);
+    }
+
     const passwordCompare = await bcrypt.compare(
       password,
       existingUser.passwordHash,
@@ -190,6 +188,10 @@ class AuthService {
       throw createError("invalid token type", 400);
     }
 
+    if (payload.role !== "user") {
+      throw createError("invalid token role", 400);
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
     });
@@ -201,35 +203,52 @@ class AuthService {
     return this.generateTokens(payload.sub);
   }
 
+  async guest(email: string) {
+    const user = await userService.findOrCreateGuestByEmail(email);
+    const accessToken = this.generateAccessToken(user.id, "guest", "guest");
+
+    return { accessToken, user };
+  }
+
   private async generateTokens(
     userId: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
-    const accessExpires = getOrThrowEnv(
-      "JWT_ACCESS_EXPIRES",
-    ) as SignOptions["expiresIn"];
+    const accessToken = this.generateAccessToken(userId, "access", "user");
     const refreshExpires = getOrThrowEnv(
       "JWT_REFRESH_EXPIRES",
     ) as SignOptions["expiresIn"];
-
-    const accessToken = jwt.sign(
-      {
-        sub: userId,
-        type: "access",
-      },
-      getOrThrowEnv("JWT_ACCESS_SECRET"),
-      { expiresIn: accessExpires },
-    );
 
     const refreshToken = jwt.sign(
       {
         sub: userId,
         type: "refresh",
+        role: "user",
       },
       getOrThrowEnv("JWT_REFRESH_SECRET"),
       { expiresIn: refreshExpires },
     );
 
     return { accessToken, refreshToken };
+  }
+
+  private generateAccessToken(
+    userId: string,
+    type: "access" | "guest",
+    role: UserRole,
+  ) {
+    const accessExpires = getOrThrowEnv(
+      "JWT_ACCESS_EXPIRES",
+    ) as SignOptions["expiresIn"];
+
+    return jwt.sign(
+      {
+        sub: userId,
+        type,
+        role,
+      },
+      getOrThrowEnv("JWT_ACCESS_SECRET"),
+      { expiresIn: accessExpires },
+    );
   }
 
   private async sendVerificationEmailOrRollback(

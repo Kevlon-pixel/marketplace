@@ -5,6 +5,7 @@ import { createError } from "../../shared/utils/create-error.js";
 import { YooKassa } from "../../shared/utils/payment.js";
 import { randomUUID } from "crypto";
 import { getOrThrowEnv } from "../../shared/utils/get-or-throw-env.js";
+import { sendBoughtProductEmail } from "../../shared/utils/smtp.js";
 
 const mapYooKassaStatusToOrderStatus = (
   status: string,
@@ -358,6 +359,7 @@ class OrderService {
     paymentId: string,
     paymentStatus: string,
   ) {
+    console.log(paymentId);
     const order = await prisma.order.findFirst({
       where: {
         paymentId,
@@ -367,8 +369,27 @@ class OrderService {
         status: true,
         priceAtSale: true,
         inventoryItemId: true,
+        purchaseEmailSentAt: true,
+        user: {
+          select: {
+            email: true,
+          },
+        },
+        product: {
+          select: {
+            title: true,
+            type: true,
+          },
+        },
+        inventoryItem: {
+          select: {
+            content: true,
+          },
+        },
       },
     });
+
+    console.log(order?.id);
 
     if (!order) {
       return { processed: false, reason: "order not found by paymentId" };
@@ -397,9 +418,6 @@ class OrderService {
     console.log(remotePayment.status);
 
     if (!verifiedStatus) {
-      console.log("motherAlive?");
-      console.log(remotePayment.status);
-      console.log("motherAlive?");
       return { processed: true, status: order.status };
     }
 
@@ -408,6 +426,13 @@ class OrderService {
     }
 
     if (verifiedStatus === order.status) {
+      if (
+        verifiedStatus === PaymentStatus.PAID &&
+        order.purchaseEmailSentAt === null
+      ) {
+        await this.sendPurchaseEmail(order);
+      }
+
       return { processed: true, status: order.status };
     }
 
@@ -437,11 +462,47 @@ class OrderService {
       }
     });
 
+    if (verifiedStatus === PaymentStatus.PAID) {
+      await this.sendPurchaseEmail(order);
+    }
+
     return {
       processed: true,
       status: verifiedStatus,
       event,
     };
+  }
+
+  private async sendPurchaseEmail(order: {
+    id: string;
+    user: { email: string };
+    product: { title: string; type: "KEY" | "ACCOUNT" };
+    inventoryItem: { content: unknown } | null;
+    purchaseEmailSentAt: Date | null;
+  }) {
+    if (order.purchaseEmailSentAt) {
+      return;
+    }
+
+    if (!order.inventoryItem) {
+      throw createError("inventory item not found for paid order", 500);
+    }
+
+    await sendBoughtProductEmail(
+      order.user.email,
+      order.product.title,
+      order.product.type,
+      order.inventoryItem?.content,
+    );
+
+    await prisma.order.update({
+      where: {
+        id: order.id,
+      },
+      data: {
+        purchaseEmailSentAt: new Date(),
+      },
+    });
   }
 }
 

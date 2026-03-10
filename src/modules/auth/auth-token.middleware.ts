@@ -27,7 +27,8 @@ const authTokenMiddleware: RequestHandler = (req, res, next) => {
     if (
       typeof decoded !== "object" ||
       decoded === null ||
-      decoded.type !== "access" ||
+      !["access", "guest"].includes(decoded.type) ||
+      !["user", "guest"].includes(decoded.role) ||
       typeof decoded.sub !== "string"
     ) {
       return res
