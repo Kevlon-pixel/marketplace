@@ -1,19 +1,25 @@
 import { Router } from "express";
 import {
+  forgotPassword,
   guest,
   login,
   logout,
   refresh,
   register,
+  resetPassword,
+  verifyResetCode,
   verify,
 } from "./auth.controller.js";
 import authorizeRoles from "./authorize-roles.middleware.js";
 import authTokenMiddleware from "./auth-token.middleware.js";
 import { validateMiddleware } from "../../middlewares/validate.middleware.js";
 import {
+  ForgotPasswordSchema,
   GuestSchema,
   LoginSchema,
   RegisterSchema,
+  ResetPasswordSchema,
+  VerifyResetCodeSchema,
   VerifySchema,
 } from "./schemas/index.js";
 
@@ -54,6 +60,32 @@ const router = Router();
  *           format: email
  *         password:
  *           type: string
+ *     ForgotPasswordInput:
+ *       type: object
+ *       required: [email]
+ *       properties:
+ *         email:
+ *           type: string
+ *           format: email
+ *     ResetPasswordInput:
+ *       type: object
+ *       required: [resetToken, password]
+ *       properties:
+ *         resetToken:
+ *           type: string
+ *         password:
+ *           type: string
+ *           minLength: 8
+ *           pattern: ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)\S+$
+ *     VerifyResetCodeInput:
+ *       type: object
+ *       required: [email, code]
+ *       properties:
+ *         email:
+ *           type: string
+ *           format: email
+ *         code:
+ *           type: integer
  *     GuestInput:
  *       type: object
  *       required: [email]
@@ -139,6 +171,27 @@ const router = Router();
  *         message:
  *           type: string
  *           example: logout successful
+ *     MessageResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         message:
+ *           type: string
+ *     VerifyResetCodeResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         message:
+ *           type: string
+ *         data:
+ *           type: object
+ *           properties:
+ *             resetToken:
+ *               type: string
  *     ErrorResponse:
  *       type: object
  *       properties:
@@ -177,6 +230,12 @@ const router = Router();
  *               $ref: '#/components/schemas/RegisterResponse'
  *       400:
  *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       503:
+ *         description: Failed to send verification email
  *         content:
  *           application/json:
  *             schema:
@@ -247,6 +306,12 @@ router.post("/verify", validateMiddleware(VerifySchema), verify);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       429:
  *         description: Too many requests
  *         content:
@@ -255,6 +320,129 @@ router.post("/verify", validateMiddleware(VerifySchema), verify);
  *               $ref: '#/components/schemas/RateLimitResponse'
  */
 router.post("/login", validateMiddleware(LoginSchema), login);
+/**
+ * @openapi
+ * /api/auth/forgot-password:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Send password reset code to email
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ForgotPasswordInput'
+ *     responses:
+ *       200:
+ *         description: Reset flow accepted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       503:
+ *         description: Failed to send password reset email
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         description: Too many password reset requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RateLimitResponse'
+ */
+router.post(
+  "/forgot-password",
+  validateMiddleware(ForgotPasswordSchema),
+  forgotPassword,
+);
+/**
+ * @openapi
+ * /api/auth/verify-reset-code:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Verify password reset code
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/VerifyResetCodeInput'
+ *     responses:
+ *       200:
+ *         description: Reset code is valid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/VerifyResetCodeResponse'
+ *       400:
+ *         description: Validation error or invalid/expired reset code
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         description: Too many code verification attempts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RateLimitResponse'
+ */
+router.post(
+  "/verify-reset-code",
+  validateMiddleware(VerifyResetCodeSchema),
+  verifyResetCode,
+);
+/**
+ * @openapi
+ * /api/auth/reset-password:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Change password by email reset code
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ResetPasswordInput'
+ *     responses:
+ *       200:
+ *         description: Password changed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
+ *       401:
+ *         description: Invalid or expired reset token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       400:
+ *         description: Validation error or invalid reset token payload
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         description: Too many password reset requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RateLimitResponse'
+ */
+router.post(
+  "/reset-password",
+  validateMiddleware(ResetPasswordSchema),
+  resetPassword,
+);
 /**
  * @openapi
  * /api/auth/logout:
@@ -272,6 +460,12 @@ router.post("/login", validateMiddleware(LoginSchema), login);
  *               $ref: '#/components/schemas/LogoutResponse'
  *       401:
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Forbidden for non-user roles
  *         content:
  *           application/json:
  *             schema:
@@ -303,6 +497,12 @@ router.post("/logout", authTokenMiddleware, authorizeRoles("user"), logout);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         description: Too many refresh attempts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RateLimitResponse'
  */
 router.post("/refresh", refresh);
 
@@ -327,6 +527,12 @@ router.post("/refresh", refresh);
  *               $ref: '#/components/schemas/GuestAuthResponse'
  *       409:
  *         description: Email already belongs to a registered user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       400:
+ *         description: Validation error
  *         content:
  *           application/json:
  *             schema:

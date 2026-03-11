@@ -18,8 +18,26 @@ export const registerEmailLimiter = new RateLimiterMemory({
   blockDuration: 30 * 60,
 });
 
+export const forgotPasswordLimiter = new RateLimiterMemory({
+  points: 5,
+  duration: 15 * 60,
+  blockDuration: 30 * 60,
+});
+
 export const verifyEmailLimiter = new RateLimiterMemory({
   points: 5,
+  duration: 15 * 60,
+  blockDuration: 30 * 60,
+});
+
+export const verifyResetCodeLimiter = new RateLimiterMemory({
+  points: 5,
+  duration: 15 * 60,
+  blockDuration: 30 * 60,
+});
+
+export const refreshLimiter = new RateLimiterMemory({
+  points: 20,
   duration: 15 * 60,
   blockDuration: 30 * 60,
 });

@@ -6,4 +6,5 @@ export interface TokenPayload extends JwtPayload {
   sub: string;
   type: "access" | "refresh" | "guest";
   role: UserRole;
+  tokenVersion: number;
 }

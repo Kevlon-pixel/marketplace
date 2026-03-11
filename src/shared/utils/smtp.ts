@@ -105,14 +105,30 @@ function buildPurchaseHtml(
 
   if (!message) {
     message = `
-    <h1 align="center">Ваш товар готов к получению</h1>
-    <p><strong>Товар:</strong> ${safeTitle}</p>
-    <p>Мы подтвердили оплату, но не смогли автоматически подготовить данные для выдачи.</p>
-    <p>Пожалуйста, свяжитесь с поддержкой и укажите данные вашего заказа.</p>
-  `;
+      <h1 align="center">Ваш товар готов к получению</h1>
+      <p><strong>Товар:</strong> ${safeTitle}</p>
+      <p>Мы подтвердили оплату, но не смогли автоматически подготовить данные для выдачи.</p>
+      <p>Пожалуйста, свяжитесь с поддержкой и укажите данные вашего заказа.</p>
+    `;
   }
 
   return message;
+}
+
+function normalizeExpires(expires: Date | string): string {
+  const date = new Date(expires);
+  const timeZone = getOrThrowEnv("EMAIL_TIMEZONE") || "Europe/Moscow";
+
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZone,
+  }).format(date);
 }
 
 export const sendBoughtProductEmail = async (
@@ -132,22 +148,6 @@ export const sendBoughtProductEmail = async (
   });
 };
 
-function normalizeExpires(expires: Date | string): string {
-  const date = new Date(expires);
-  const timeZone = getOrThrowEnv("EMAIL_TIMEZONE") || "Europe/Moscow";
-
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-    timeZone,
-  }).format(date);
-}
-
 export const sendVerificationEmail = async (
   email: string,
   code: number,
@@ -161,5 +161,21 @@ export const sendVerificationEmail = async (
     sender: "Marketplace",
     subject: "Код подтверждения email",
     html: `<h1 align="center">Ваш код: ${code}</h1><p align="center">Код действует до: ${normalizeExpires(expires)}</p>`,
+  });
+};
+
+export const sendPasswordResetEmail = async (
+  email: string,
+  code: number,
+  expires: Date,
+): Promise<void> => {
+  const transporter = createTransporter();
+
+  await transporter.sendMail({
+    to: email,
+    from: getOrThrowEnv("EMAIL_LOGIN"),
+    sender: "Marketplace",
+    subject: "Код для смены пароля",
+    html: `<h1 align="center">Ваш код для смены пароля: ${code}</h1><p align="center">Код действует до: ${normalizeExpires(expires)}</p>`,
   });
 };

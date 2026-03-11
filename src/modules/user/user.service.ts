@@ -17,14 +17,14 @@ class UserService {
 
   async createRegisteredUser(
     email: string,
-    passwordHash: string,
+    pendingPasswordHash: string,
     emailVerificationCode: number,
     emailVerificationCodeExpire: Date,
   ) {
     return await prisma.user.create({
       data: {
         email,
-        passwordHash,
+        pendingPasswordHash,
         emailVerificationCode,
         emailVerificationCodeExpire,
       },
@@ -58,6 +58,7 @@ class UserService {
         id: true,
         email: true,
         passwordHash: true,
+        pendingPasswordHash: true,
         isEmailVerified: true,
         emailVerificationCodeExpire: true,
         createdAt: true,
@@ -81,7 +82,7 @@ class UserService {
 
   async upgradeGuestToRegistered(
     userId: string,
-    passwordHash: string,
+    pendingPasswordHash: string,
     emailVerificationCode: number,
     emailVerificationCodeExpire: Date,
   ) {
@@ -90,7 +91,7 @@ class UserService {
         id: userId,
       },
       data: {
-        passwordHash,
+        pendingPasswordHash,
         isEmailVerified: false,
         emailVerificationCode,
         emailVerificationCodeExpire,
