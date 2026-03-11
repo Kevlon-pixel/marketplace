@@ -33,9 +33,9 @@ const router = Router();
  *         password:
  *           type: string
  *           minLength: 8
- *           pattern: ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]+$
+ *           pattern: ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)\S+$
  *           description: At least 8 chars, one uppercase, one lowercase and one digit
- *           example: Qwerty123
+ *           example: Qwerty123!
  *     VerifyInput:
  *       type: object
  *       required: [email, code]
@@ -81,8 +81,9 @@ const router = Router();
  *         success:
  *           type: boolean
  *           example: true
- *         data:
- *           $ref: '#/components/schemas/AuthUser'
+ *         message:
+ *           type: string
+ *           example: if the email can be used, check your inbox for next steps
  *     VerifyResponse:
  *       type: object
  *       properties:
@@ -169,23 +170,23 @@ const router = Router();
  *             $ref: '#/components/schemas/RegisterInput'
  *     responses:
  *       201:
- *         description: User created
+ *         description: Registration accepted
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/RegisterResponse'
  *       400:
- *         description: Validation or business rule error
+ *         description: Validation error
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
- *       409:
- *         description: Email already verified
+ *       429:
+ *         description: Too many registration attempts
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *               $ref: '#/components/schemas/RateLimitResponse'
  */
 router.post("/register", validateMiddleware(RegisterSchema), register);
 /**
@@ -208,19 +209,7 @@ router.post("/register", validateMiddleware(RegisterSchema), register);
  *             schema:
  *               $ref: '#/components/schemas/VerifyResponse'
  *       400:
- *         description: Invalid or expired code
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       404:
- *         description: User not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       409:
- *         description: Email already verified
+ *         description: Invalid or expired verification code
  *         content:
  *           application/json:
  *             schema:
@@ -254,12 +243,6 @@ router.post("/verify", validateMiddleware(VerifySchema), verify);
  *               $ref: '#/components/schemas/AccessTokenResponse'
  *       401:
  *         description: Invalid credentials
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       403:
- *         description: Email is not verified
  *         content:
  *           application/json:
  *             schema:

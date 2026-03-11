@@ -14,6 +14,7 @@ import {
   guestEmailLimiter,
   ipLimiter,
   loginLimiter,
+  registerEmailLimiter,
   verifyEmailLimiter,
 } from "../../shared/utils/rate-limiter.js";
 
@@ -23,10 +24,24 @@ export const register: RequestHandler = async (
   next,
 ) => {
   const { email, password } = req.body;
+  const ip = req.ip || req.socket.remoteAddress || "unknown-ip";
 
   try {
-    const user = await authService.register(email, password);
-    return res.status(201).json({ success: true, data: user });
+    try {
+      await ipLimiter.consume(ip);
+      await registerEmailLimiter.consume(email);
+    } catch {
+      return res.status(429).json({
+        success: false,
+        message: "too many registration attempts",
+      });
+    }
+
+    await authService.register(email, password);
+    return res.status(201).json({
+      success: true,
+      message: "if the email can be used, check your inbox for next steps",
+    });
   } catch (err) {
     const appError = err as AppError;
     appError.origin = "authController.register";
@@ -119,7 +134,7 @@ export const login: RequestHandler = async (
   } catch (err) {
     const appError = err as AppError;
 
-    if (appError.statusCode === 401 || appError.statusCode === 403) {
+    if (appError.statusCode === 401) {
       try {
         await loginLimiter.consume(email);
       } catch {}

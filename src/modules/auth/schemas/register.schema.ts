@@ -13,7 +13,7 @@ export const RegisterSchema = z.object({
       .min(1, "password required")
       .min(8, "password must be at least 8 characters")
       .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]+$/,
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)\S+$/,
         "password must contain at least one number, uppercase and lowercase letter",
       ),
   }),

@@ -16,17 +16,14 @@ class AuthService {
 
     if (user?.passwordHash) {
       if (user.isEmailVerified) {
-        throw createError("user with this email already verified", 409);
+        return;
       }
 
       if (
         user.emailVerificationCodeExpire !== null &&
         user.emailVerificationCodeExpire > now
       ) {
-        throw createError(
-          "verification email already sent, please check your inbox",
-          400,
-        );
+        return;
       }
 
       const emailCode = crypto.randomInt(100000, 1000000);
@@ -98,27 +95,15 @@ class AuthService {
       },
     });
 
-    if (!user) {
-      throw createError("user not found", 404);
-    }
-
-    if (user.isEmailVerified) {
-      throw createError("email already verified", 409);
-    }
-
     if (
+      !user ||
+      user.isEmailVerified ||
       user.emailVerificationCode === null ||
-      user.emailVerificationCodeExpire === null
+      user.emailVerificationCodeExpire === null ||
+      user.emailVerificationCodeExpire < now ||
+      user.emailVerificationCode !== code
     ) {
-      throw createError("verification code not requested", 400);
-    }
-
-    if (user.emailVerificationCodeExpire < now) {
-      throw createError("verification code expired", 400);
-    }
-
-    if (user.emailVerificationCode !== code) {
-      throw createError("invalid verification code", 400);
+      throw createError("invalid or expired verification code", 400);
     }
 
     return prisma.user.update({
@@ -153,7 +138,7 @@ class AuthService {
     }
 
     if (!existingUser.passwordHash) {
-      throw createError("user is not registered", 401);
+      throw createError("invalid credentials", 401);
     }
 
     const passwordCompare = await bcrypt.compare(
@@ -166,7 +151,7 @@ class AuthService {
     }
 
     if (!existingUser.isEmailVerified) {
-      throw createError("email is not verified", 403);
+      throw createError("invalid credentials", 401);
     }
 
     return this.generateTokens(existingUser.id);
