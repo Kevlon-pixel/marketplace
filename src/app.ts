@@ -11,6 +11,7 @@ import { getOrThrowEnv } from "./shared/utils/get-or-throw-env.js";
 import logger from "./shared/utils/logger.js";
 import swaggerUi from "swagger-ui-express";
 import swaggerJsdocs from "swagger-jsdoc";
+import passport from "./shared/utils/passport.js";
 
 const swaggerDocs = swaggerJsdocs({
   definition: {
@@ -42,6 +43,7 @@ const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(passport.initialize());
 
 app.use(`/api/docs`, swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 app.use(`/api/auth`, authRoutes);

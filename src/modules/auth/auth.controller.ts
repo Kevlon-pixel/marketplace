@@ -1,5 +1,7 @@
 import type { RequestHandler } from "express";
 import isDev from "../../shared/config/is-dev.js";
+import passport from "../../shared/utils/passport.js";
+import { getOrThrowEnv } from "../../shared/utils/get-or-throw-env.js";
 import authService from "./auth.service.js";
 
 import type { AppError } from "../../shared/types/error.js";
@@ -23,6 +25,47 @@ import {
   verifyResetCodeLimiter,
   verifyEmailLimiter,
 } from "../../shared/utils/rate-limiter.js";
+
+const refreshCookieOptions = {
+  httpOnly: true,
+  secure: !isDev,
+  sameSite: "strict" as const,
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+  path: "/",
+};
+
+const setRefreshTokenCookie = (
+  res: Parameters<RequestHandler>[1],
+  refreshToken: string,
+) => {
+  res.cookie("refreshToken", refreshToken, refreshCookieOptions);
+};
+
+const getOauthRedirectBase = (kind: "success" | "failure") => {
+  const frontendUrl = getOrThrowEnv("FRONTEND_URL").replace(/\/+$/, "");
+
+  if (kind === "success") {
+    return (
+      process.env.OAUTH_SUCCESS_REDIRECT ??
+      `${frontendUrl}/oauth/yandex/callback`
+    );
+  }
+
+  return process.env.OAUTH_FAILURE_REDIRECT ?? `${frontendUrl}/login`;
+};
+
+const buildOauthRedirectUrl = (
+  kind: "success" | "failure",
+  params: Record<string, string>,
+) => {
+  const url = new URL(getOauthRedirectBase(kind));
+
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+
+  return url.toString();
+};
 
 export const register: RequestHandler = async (
   req: TypedRequest<typeof RegisterSchema>,
@@ -131,13 +174,7 @@ export const login: RequestHandler = async (
 
     await loginLimiter.delete(email);
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: !isDev,
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/",
-    });
+    setRefreshTokenCookie(res, refreshToken);
 
     return res.status(200).json({ success: true, accessToken });
   } catch (err) {
@@ -287,7 +324,9 @@ export const logout: RequestHandler = async (req, res, next) => {
       path: "/",
     });
 
-    return res.status(200).json({ success: true, message: "logout successful" });
+    return res
+      .status(200)
+      .json({ success: true, message: "logout successful" });
   } catch (err) {
     const appError = err as AppError;
     appError.origin = "authController.logout";
@@ -327,13 +366,7 @@ export const refresh: RequestHandler = async (req, res, next) => {
     const { accessToken, refreshToken } =
       await authService.refresh(oldRefreshToken);
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: !isDev,
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/",
-    });
+    setRefreshTokenCookie(res, refreshToken);
 
     await refreshLimiter.delete(ip);
     res.status(200).json({ success: true, accessToken });
@@ -383,4 +416,49 @@ export const guest: RequestHandler = async (
     appError.origin = "authController.guest";
     next(appError);
   }
+};
+
+export const yandex: RequestHandler = (req, res, next) => {
+  passport.authenticate("yandex", { session: false })(req, res, next);
+};
+
+export const yandexCallback: RequestHandler = (req, res, next) => {
+  passport.authenticate(
+    "yandex",
+    { session: false },
+    async (err: unknown, user?: { id?: string } | false) => {
+      const redirectWithError = (message: string) =>
+        res.redirect(buildOauthRedirectUrl("failure", { error: message }));
+
+      if (err) {
+        const appError = err as AppError;
+        return redirectWithError(
+          appError.message || "oauth authentication failed",
+        );
+      }
+
+      if (!user || typeof user.id !== "string") {
+        return redirectWithError("oauth authentication failed");
+      }
+
+      try {
+        const { accessToken, refreshToken } = await authService.loginWithOAuth(
+          user.id,
+        );
+
+        setRefreshTokenCookie(res, refreshToken);
+
+        return res.redirect(buildOauthRedirectUrl("success", { accessToken }));
+      } catch (error) {
+        const appError = error as AppError;
+        appError.origin = "authController.yandexCallback";
+
+        if (appError.statusCode && appError.statusCode < 500) {
+          return redirectWithError(appError.message);
+        }
+
+        return next(appError);
+      }
+    },
+  )(req, res, next);
 };

@@ -29,6 +29,7 @@ enum InventoryItemStatus {
 model User {
   id           String  @id @default(uuid())
   email        String  @unique
+  yandexId     String? @unique
   passwordHash String?
   pendingPasswordHash String?
   tokenVersion Int     @default(0)

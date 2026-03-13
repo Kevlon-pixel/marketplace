@@ -9,6 +9,8 @@ import {
   resetPassword,
   verifyResetCode,
   verify,
+  yandex,
+  yandexCallback,
 } from "./auth.controller.js";
 import authorizeRoles from "./authorize-roles.middleware.js";
 import authTokenMiddleware from "./auth-token.middleware.js";
@@ -301,7 +303,7 @@ router.post("/verify", validateMiddleware(VerifySchema), verify);
  *             schema:
  *               $ref: '#/components/schemas/AccessTokenResponse'
  *       401:
- *         description: Invalid credentials
+ *         description: Invalid credentials or password is not set, use password reset
  *         content:
  *           application/json:
  *             schema:
@@ -326,6 +328,7 @@ router.post("/login", validateMiddleware(LoginSchema), login);
  *   post:
  *     tags: [Auth]
  *     summary: Send password reset code to email
+ *     description: Supports both password recovery and initial password setup for verified OAuth-only accounts.
  *     requestBody:
  *       required: true
  *       content:
@@ -369,6 +372,7 @@ router.post(
  *   post:
  *     tags: [Auth]
  *     summary: Verify password reset code
+ *     description: Supports both password recovery and initial password setup for verified OAuth-only accounts.
  *     requestBody:
  *       required: true
  *       content:
@@ -406,6 +410,7 @@ router.post(
  *   post:
  *     tags: [Auth]
  *     summary: Change password by email reset code
+ *     description: Supports both password recovery and initial password setup for verified OAuth-only accounts.
  *     requestBody:
  *       required: true
  *       content:
@@ -545,5 +550,37 @@ router.post("/refresh", refresh);
  *               $ref: '#/components/schemas/RateLimitResponse'
  */
 router.post("/guest", validateMiddleware(GuestSchema), guest);
+
+/**
+ * @openapi
+ * /api/auth/yandex:
+ *   get:
+ *     tags: [Auth]
+ *     summary: Start Yandex OAuth login
+ *     description: Redirects the user to Yandex OAuth consent page.
+ *     responses:
+ *       302:
+ *         description: Redirect to Yandex OAuth
+ */
+router.get("/yandex", yandex);
+
+/**
+ * @openapi
+ * /api/auth/yandex/callback:
+ *   get:
+ *     tags: [Auth]
+ *     summary: Handle Yandex OAuth callback
+ *     description: Completes OAuth login, issues JWT tokens, sets refresh cookie and redirects to frontend.
+ *     responses:
+ *       302:
+ *         description: Redirect to frontend success or failure URL
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.get("/yandex/callback", yandexCallback);
 
 export default router;

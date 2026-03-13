@@ -18,6 +18,10 @@ class AuthService {
     const user = await userService.findUserByEmail(email);
     const pendingPasswordHash = await bcrypt.hash(password, salt);
 
+    if (user && user.isEmailVerified && !user.passwordHash) {
+      throw createError("password is not set, use password reset", 409);
+    }
+
     if (user?.passwordHash) {
       if (user.isEmailVerified) {
         return {
@@ -146,6 +150,10 @@ class AuthService {
     }
 
     if (!existingUser.passwordHash) {
+      if (existingUser.isEmailVerified) {
+        throw createError("password is not set, use password reset", 401);
+      }
+
       throw createError("invalid credentials", 401);
     }
 
@@ -171,12 +179,11 @@ class AuthService {
       select: {
         id: true,
         email: true,
-        passwordHash: true,
         isEmailVerified: true,
       },
     });
 
-    if (!user?.passwordHash || !user.isEmailVerified) {
+    if (!user || !user.isEmailVerified) {
       return {
         email,
         passwordResetRequested: false,
@@ -213,7 +220,7 @@ class AuthService {
       where: { email },
       select: {
         id: true,
-        passwordHash: true,
+        isEmailVerified: true,
         passwordResetCode: true,
         passwordResetCodeExpire: true,
         tokenVersion: true,
@@ -221,7 +228,8 @@ class AuthService {
     });
 
     if (
-      !user?.passwordHash ||
+      !user ||
+      !user.isEmailVerified ||
       user.passwordResetCode === null ||
       user.passwordResetCodeExpire === null ||
       user.passwordResetCodeExpire < now ||
@@ -258,7 +266,7 @@ class AuthService {
       where: { id: payload.sub },
       select: {
         id: true,
-        passwordHash: true,
+        isEmailVerified: true,
         passwordResetCode: true,
         passwordResetCodeExpire: true,
         tokenVersion: true,
@@ -266,7 +274,8 @@ class AuthService {
     });
 
     if (
-      !user?.passwordHash ||
+      !user ||
+      !user.isEmailVerified ||
       user.tokenVersion !== payload.tokenVersion ||
       user.passwordResetCode === null ||
       user.passwordResetCodeExpire === null ||
@@ -353,6 +362,39 @@ class AuthService {
     const accessToken = this.generateAccessToken(user.id, "guest", "guest", 0);
 
     return { accessToken, user };
+  }
+
+  async loginWithOAuth(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        isEmailVerified: true,
+        tokenVersion: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      throw createError("oauth user not found", 404);
+    }
+
+    const { accessToken, refreshToken } = await this.generateTokens(
+      user.id,
+      user.tokenVersion,
+    );
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        isEmailVerified: user.isEmailVerified,
+        createdAt: user.createdAt,
+      },
+    };
   }
 
   private async generateTokens(
